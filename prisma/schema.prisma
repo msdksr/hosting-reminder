@@ -1,0 +1,36 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+model Client {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String
+  phone     String?
+  services  Service[]
+  createdAt DateTime  @default(now())
+}
+
+model Service {
+  id          Int      @id @default(autoincrement())
+  clientId    Int
+  client      Client   @relation(fields: [clientId], references: [id])
+  domainName  String
+  serviceType String
+  expiryDate  DateTime
+  price       Float
+  isPaid      Boolean  @default(false)
+  reminders   Reminder[]
+}
+
+model Reminder {
+  id        Int      @id @default(autoincrement())
+  serviceId Int
+  service   Service  @relation(fields: [serviceId], references: [id])
+  stage     Int
+  sentAt    DateTime @default(now())
+}
