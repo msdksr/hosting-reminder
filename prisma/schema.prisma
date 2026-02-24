@@ -6,31 +6,146 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum Role {
+  SUPERADMIN
+  ADMIN
+  CLIENT
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          Role      @default(CLIENT)
+  isApproved    Boolean   @default(false)
+  accounts      Account[]
+  sessions      Session[]
+  
+  // Link to Client record if role is CLIENT
+  clientId      Int?      @unique
+  client        Client?   @relation(fields: [clientId], references: [id])
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
 model Client {
-  id        Int       @id @default(autoincrement())
-  name      String
-  email     String
-  phone     String?
-  services  Service[]
-  createdAt DateTime  @default(now())
+  id              Int       @id @default(autoincrement())
+  name            String
+  email           String    @unique
+  phone           String?
+  whatsappOptIn   Boolean   @default(false)
+  notes           String?
+  services        Service[]
+  reminderLogs    ReminderLog[]
+  
+  // Back-relation to User
+  user            User?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model Service {
-  id          Int      @id @default(autoincrement())
-  clientId    Int
-  client      Client   @relation(fields: [clientId], references: [id])
-  domainName  String
-  serviceType String
-  expiryDate  DateTime
-  price       Float
-  isPaid      Boolean  @default(false)
-  reminders   Reminder[]
+  id           Int           @id @default(autoincrement())
+  clientId     Int
+  client       Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  domainName   String
+  serviceType  String        // domain | hosting | ssl
+  expiryDate   DateTime
+  price        Float         @default(0)
+  isPaid       Boolean       @default(false)
+  status       String        @default("active") // active | expired | renewed
+  reminders    Reminder[]
+  reminderLogs ReminderLog[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 }
 
 model Reminder {
   id        Int      @id @default(autoincrement())
   serviceId Int
-  service   Service  @relation(fields: [serviceId], references: [id])
-  stage     Int
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  stage     Int      // days before expiry: 30, 14, 7, 3, 1, 0, -1
   sentAt    DateTime @default(now())
+  method    String   @default("email") // email | whatsapp | both
+}
+
+// Detailed log of every reminder dispatch attempt
+model ReminderLog {
+  id           Int      @id @default(autoincrement())
+  serviceId    Int
+  service      Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  clientId     Int
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  channel      String   // email | whatsapp
+  daysLeft     Int
+  status       String   // sent | failed | skipped
+  errorMessage String?
+  sentAt       DateTime @default(now())
+}
+
+// Reminder schedule configuration
+model ReminderSchedule {
+  id              Int      @id @default(autoincrement())
+  name            String   @default("Default")
+  daysBefore      Int[]    @default([30, 14, 7, 3, 1])
+  channels        String[] @default(["email"])
+  serviceTypes    String[] @default(["domain", "hosting", "ssl"])
+  isActive        Boolean  @default(true)
+  emailTemplate   String?
+  whatsappTemplate String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Sync logs from Plesk 
+model SyncLog {
+  id           Int      @id @default(autoincrement())
+  source       String   @default("manual") // plesk | manual
+  status       String   // success | failed | partial
+  totalSynced  Int      @default(0)
+  totalErrors  Int      @default(0)
+  errorDetails String?
+  startedAt    DateTime @default(now())
+  finishedAt   DateTime?
 }
