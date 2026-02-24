@@ -4,20 +4,18 @@ import { sendWhatsAppMessage } from "./whatsapp";
 
 export const REMINDER_STAGES = [30, 14, 7, 3, 1, 0];
 
-function daysBetween(date1: Date, date2: Date) {
+const daysBetween = (date1: Date, date2: Date) => {
   const diffTime = date1.getTime() - date2.getTime();
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-}
+};
 
-function getExpiryLabel(days: number): string {
+const getExpiryLabel = (days: number): string => {
   if (days < 0) return `expired ${Math.abs(days)} day(s) ago`;
   if (days === 0) return "expires today";
   return `expires in ${days} day(s)`;
-}
+};
 
-export async function runReminders() {
-  console.log("🔔 Reminder job started...");
-
+export const runReminders = async () => {
   const today = new Date();
 
   // Load active schedules
@@ -64,7 +62,7 @@ export async function runReminders() {
 
       // Check deduplication: already sent this stage via this channel?
       const alreadySent = service.reminders.some(
-        (r) => r.stage === daysLeft && r.method === channel
+        (r) => r.stage === daysLeft && r.method === channel,
       );
       if (alreadySent) {
         skipped++;
@@ -79,16 +77,25 @@ export async function runReminders() {
           success = await sendEmail(
             service.client.email,
             `Reminder: ${service.domainName} ${getExpiryLabel(daysLeft)}`,
-            buildEmailHtml(service.client.name, service.domainName, service.serviceType, daysLeft, service.expiryDate)
+            buildEmailHtml(
+              service.client.name,
+              service.domainName,
+              service.serviceType,
+              daysLeft,
+              service.expiryDate,
+            ),
           );
         } else if (channel === "whatsapp" && service.client.phone) {
           const message = buildWhatsAppMessage(
             service.client.name,
             service.domainName,
             service.serviceType,
-            daysLeft
+            daysLeft,
           );
-          success = !!(await sendWhatsAppMessage(service.client.phone, message));
+          success = !!(await sendWhatsAppMessage(
+            service.client.phone,
+            message,
+          ));
         }
       } catch (err) {
         success = false;
@@ -113,25 +120,28 @@ export async function runReminders() {
           data: { serviceId: service.id, stage: daysLeft, method: channel },
         });
         sent++;
-        console.log(`✅ ${channel} sent to ${service.client.email} for ${service.domainName} (${daysLeft}d)`);
+        console.log(
+          `✅ ${channel} sent to ${service.client.email} for ${service.domainName} (${daysLeft}d)`,
+        );
       } else {
         failed++;
-        console.warn(`❌ ${channel} failed for ${service.client.email} - ${service.domainName}`);
+        console.warn(
+          `❌ ${channel} failed for ${service.client.email} - ${service.domainName}`,
+        );
       }
     }
   }
 
-  console.log(`🎯 Reminder job done: ${sent} sent, ${failed} failed, ${skipped} skipped`);
   return { sent, failed, skipped };
-}
+};
 
-function buildEmailHtml(
+const buildEmailHtml = (
   clientName: string,
   domain: string,
   serviceType: string,
   daysLeft: number,
-  expiryDate: Date
-): string {
+  expiryDate: Date,
+): string => {
   const urgencyColor =
     daysLeft <= 1 ? "#ef4444" : daysLeft <= 7 ? "#f59e0b" : "#6366f1";
   const formattedDate = new Date(expiryDate).toLocaleDateString("en-US", {
@@ -207,31 +217,27 @@ function buildEmailHtml(
 </body>
 </html>
   `;
-}
+};
 
-function buildWhatsAppMessage(
+const buildWhatsAppMessage = (
   clientName: string,
   domain: string,
   serviceType: string,
-  daysLeft: number
-): string {
-  const urgency = daysLeft <= 1 ? "🚨 URGENT" : daysLeft <= 7 ? "⚠️ REMINDER" : "📢 Notice";
+  daysLeft: number,
+): string => {
+  const urgency =
+    daysLeft <= 1 ? "🚨 URGENT" : daysLeft <= 7 ? "⚠️ REMINDER" : "📢 Notice";
   const dayText =
     daysLeft <= 0
       ? "has *EXPIRED*"
       : daysLeft === 0
-      ? "expires *TODAY*"
-      : `expires in *${daysLeft} day${daysLeft !== 1 ? "s" : ""}*`;
+        ? "expires *TODAY*"
+        : `expires in *${daysLeft} day${daysLeft !== 1 ? "s" : ""}*`;
 
   return `${urgency} - Service Expiry
-
 Hi *${clientName}*,
-
 Your *${serviceType}* service for *${domain}* ${dayText}.
-
 Please renew it as soon as possible to avoid any service interruption.
-
 Need help? Reply to this message or contact your hosting provider.
-
 _This is an automated reminder from HostAlert._`;
-}
+};

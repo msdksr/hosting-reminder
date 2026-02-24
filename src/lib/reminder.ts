@@ -12,10 +12,8 @@ interface Service {
   };
 }
 
-export async function sendReminder(service: Service) {
+export const sendReminder = async (service: Service) => {
   try {
-    console.log("Sending reminder for:", service.domainName);
-
     // 1️⃣ Email
     const emailSuccess = await sendEmail(
       service.client.email,
