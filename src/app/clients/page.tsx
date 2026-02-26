@@ -118,12 +118,30 @@ export default function ClientsPage() {
     await load();
   };
 
+  const handlePushToPlesk = async (id: number) => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/plesk/clients/${id}`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        alert("✅ Client successfully created in Plesk!");
+      } else {
+        alert(`❌ Failed to create in Plesk: ${data.error}`);
+      }
+    } catch (e: any) {
+      alert(`❌ Error: ${e.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const filtered = clients.filter(
     (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.email.toLowerCase().includes(search.toLowerCase()) ||
       (c.phone || "").includes(search)
   );
+
 
   return (
     <div>
@@ -243,6 +261,14 @@ export default function ClientsPage() {
                       <div style={{ display: "flex", gap: 6 }}>
                         <button
                           className="btn btn-ghost btn-sm"
+                          onClick={() => handlePushToPlesk(client.id)}
+                          title="Create in Plesk"
+                          disabled={saving}
+                        >
+                          🔌
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-sm"
                           onClick={() => openEdit(client)}
                           title="Edit"
                         >
@@ -263,6 +289,7 @@ export default function ClientsPage() {
             </table>
           </div>
         )}
+
       </div>
 
       {/* Add/Edit Modal */}

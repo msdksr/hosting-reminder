@@ -1,5 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+
 
 type Section = "general" | "email" | "whatsapp" | "plesk";
 
@@ -32,7 +34,6 @@ export default function SettingsPage() {
     apiVersion: "v25.0",
   });
 
-  // Plesk settings
   const [plesk, setPlesk] = useState({
     host: "",
     apiKey: "",
@@ -40,14 +41,56 @@ export default function SettingsPage() {
     username: "admin",
   });
 
+  useEffect(() => {
+    const fetchConfigs = async () => {
+      try {
+        const res = await fetch("/api/settings/plesk");
+        const data = await res.json();
+        if (data && data.host) {
+          setPlesk({
+            host: data.host,
+            apiKey: data.apiKey,
+            port: data.port.toString(),
+            username: data.username,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch plesk config", err);
+      }
+    };
+    fetchConfigs();
+  }, []);
+
   const handleSave = async () => {
     setSaving(true);
-    // In a real implementation, POST to /api/settings
-    await new Promise((r) => setTimeout(r, 800));
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    try {
+      // Save Plesk if we have host data or are on that section
+      if (plesk.host) {
+        const res = await fetch("/api/settings/plesk", {
+          method: "POST",
+          body: JSON.stringify(plesk),
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.error || "Failed to save Plesk settings");
+        }
+      }
+
+      // Placeholder for saving other sections (General, Email, WhatsApp)
+      // These would ideally have their own API endpoints
+      
+      await new Promise((r) => setTimeout(r, 500));
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+      setTestResult(null);
+    } catch (err: any) {
+      setTestResult(`❌ Save failed: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
   };
+
 
   const handleTestWhatsApp = async () => {
     setTesting(true);
@@ -62,12 +105,34 @@ export default function SettingsPage() {
   };
 
   const handleSyncPlesk = async () => {
+    if (!plesk.host || !plesk.apiKey) {
+      setTestResult("❌ Please enter and save Plesk Host and API Key first.");
+      return;
+    }
+
     setTesting(true);
     setTestResult(null);
-    await new Promise((r) => setTimeout(r, 1200));
-    setTestResult("✅ Plesk sync initiated (feature coming soon)");
-    setTesting(false);
+    try {
+      const res = await fetch("/api/plesk/sync", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        setTestResult(`✅ Plesk sync complete! Synced ${data.totalSynced} items.`);
+      } else {
+        const error = data.error || "Unknown error";
+        if (error.includes("Plesk not configured")) {
+          setTestResult("❌ Plesk not configured. Did you click 'Save Changes' at the top?");
+        } else {
+          setTestResult(`❌ Sync failed: ${error}`);
+        }
+      }
+    } catch (err: any) {
+      setTestResult(`❌ Connection error: ${err.message}`);
+    } finally {
+      setTesting(false);
+    }
   };
+
+
 
   const sections: { key: Section; label: string; icon: string }[] = [
     { key: "general", label: "General", icon: "⚙️" },

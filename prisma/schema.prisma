@@ -149,3 +149,14 @@ model SyncLog {
   startedAt    DateTime @default(now())
   finishedAt   DateTime?
 }
+
+model PleskConfig {
+  id        Int      @id @default(autoincrement())
+
+  host      String
+  port      Int      @default(8443)
+  username  String   @default("admin")
+  apiKey    String
+  isActive  Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+}
