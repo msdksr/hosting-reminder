@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Client } from "@/types";
 
 function formatDate(dateStr: string): string {
@@ -28,7 +29,9 @@ const AVATAR_COLORS = [
 ];
 
 export default function ClientsPage() {
+  const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -217,7 +220,12 @@ export default function ClientsPage() {
               </thead>
               <tbody>
                 {filtered.map((client, i) => (
-                  <tr key={client.id}>
+                  <tr 
+                    key={client.id} 
+                    onClick={() => router.push(`/clients/${client.id}`)}
+                    style={{ cursor: "pointer" }}
+                    className="hover-row"
+                  >
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         <div
@@ -257,7 +265,7 @@ export default function ClientsPage() {
                     <td style={{ color: "var(--text-secondary)", fontSize: 13 }}>
                       {formatDate(client.createdAt)}
                     </td>
-                    <td>
+                    <td onClick={(e) => e.stopPropagation()}>
                       <div style={{ display: "flex", gap: 6 }}>
                         <button
                           className="btn btn-ghost btn-sm"
@@ -285,6 +293,7 @@ export default function ClientsPage() {
                     </td>
                   </tr>
                 ))}
+
               </tbody>
             </table>
           </div>

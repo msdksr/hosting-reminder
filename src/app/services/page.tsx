@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
+
+import { useRouter } from "next/navigation";
 import type { Service, Client } from "@/types";
 
 function daysFromNow(dateStr: string): number {
@@ -55,7 +57,9 @@ const STATUS_OPTS = ["all", "active", "expired", "renewed"] as const;
 const EXPIRY_OPTS = ["all", "today", "3d", "7d", "14d", "30d"] as const;
 
 export default function ServicesPage() {
+  const router = useRouter();
   const [services, setServices] = useState<Service[]>([]);
+
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -219,7 +223,12 @@ export default function ServicesPage() {
               </thead>
               <tbody>
                 {filtered.map((svc) => (
-                  <tr key={svc.id}>
+                  <tr 
+                    key={svc.id}
+                    onClick={() => router.push(`/services/${svc.id}`)}
+                    style={{ cursor: "pointer" }}
+                    className="hover-row"
+                  >
                     <td>
                       <div style={{ fontWeight: 600, fontSize: 13.5 }}>{svc.domainName}</div>
                     </td>
@@ -239,7 +248,7 @@ export default function ServicesPage() {
                       )}
                     </td>
                     <td><StatusBadge status={svc.status} /></td>
-                    <td>
+                    <td onClick={(e) => e.stopPropagation()}>
                       <div style={{ display: "flex", gap: 6 }}>
                         <button className="btn btn-ghost btn-sm" onClick={() => openEdit(svc)} title="Edit">✏️</button>
                         <button className="btn btn-danger btn-sm" onClick={() => setDeleteConfirm(svc.id)} title="Delete">🗑️</button>
@@ -247,6 +256,7 @@ export default function ServicesPage() {
                     </td>
                   </tr>
                 ))}
+
               </tbody>
             </table>
           </div>

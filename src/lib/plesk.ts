@@ -153,11 +153,18 @@ export async function createPleskClient(data: {
   name: string;
   email: string;
   login: string;
+  password?: string;
+  type?: "customer" | "reseller" | "admin";
   company?: string;
   phone?: string;
 }) {
   return await pleskFetch("/clients", {
     method: "POST",
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      ...data,
+      type: data.type || "customer",
+      status: 0, // Active by default
+    }),
   });
 }
+

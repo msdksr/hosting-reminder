@@ -1318,3 +1318,13 @@ tbody tr:hover {
 .auth-footer a:hover {
   text-decoration: underline;
 }
+
+.top-nav-breadcrumb .breadcrumb-parent:hover {
+  color: var(--brand-primary);
+  text-decoration: underline;
+}
+
+.hover-row:hover {
+  background-color: var(--bg-card-hover) !important;
+  box-shadow: inset 4px 0 0 var(--brand-primary);
+}
