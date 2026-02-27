@@ -32,20 +32,25 @@ export async function POST() {
     for (const pc of pleskClients) {
       try {
         const client = await prisma.client.upsert({
-          where: { email: pc.email },
+          where: { email: pc.email }, // Still fall back to email as primary unique for upsert
           update: {
             name: pc.name || pc.login,
             phone: pc.phone || null,
+            pleskId: pc.id,
+            pleskLogin: pc.login,
           },
           create: {
             name: pc.name || pc.login,
             email: pc.email,
             phone: pc.phone || null,
+            pleskId: pc.id,
+            pleskLogin: pc.login,
           },
         });
         clientMap.set(pc.id, client.id);
         totalSynced++;
       } catch (err: any) {
+
         totalErrors++;
         errors.push(`Client ${pc.login}: ${err.message}`);
       }

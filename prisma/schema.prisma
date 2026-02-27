@@ -75,6 +75,9 @@ model Client {
   phone           String?
   whatsappOptIn   Boolean   @default(false)
   notes           String?
+  pleskId         Int?      @unique
+  pleskLogin      String?
+  pleskPassword   String?
   services        Service[]
   reminderLogs    ReminderLog[]
   

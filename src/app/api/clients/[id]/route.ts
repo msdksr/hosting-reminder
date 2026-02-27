@@ -57,12 +57,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const { id } = await params;
     const body = await req.json();
-    const { name, email, phone, whatsappOptIn, notes } = body;
+    const { name, email, phone, whatsappOptIn, notes, pleskLogin, pleskPassword } = body;
 
     const client = await prisma.client.update({
       where: { id: Number(id) },
-      data: { name, email, phone, whatsappOptIn, notes },
+      data: { name, email, phone, whatsappOptIn, notes, pleskLogin, pleskPassword },
     });
+
 
     return NextResponse.json(client);
   } catch (error) {

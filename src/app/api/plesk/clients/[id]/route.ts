@@ -31,20 +31,42 @@ export async function POST(
     const result = await createPleskClient({
       name: client.name,
       email: client.email,
-      login: login + Math.floor(Math.random() * 100), // Append random to avoid collisions
+      login: login,
       password: tempPassword,
       type: "customer",
       phone: client.phone || undefined,
     });
 
+    // Store credentials in our database
+    await prisma.client.update({
+      where: { id: clientId },
+      data: {
+        pleskId: result.id,
+        pleskLogin: login,
+        pleskPassword: tempPassword,
+      }
+    });
+
     return NextResponse.json({ 
       success: true, 
       result,
-      tempPassword // Return password so admin can give it to client
+      tempPassword,
+      login: login,
+      pleskId: result.id
     });
+
   } catch (error: any) {
     console.error("Plesk Push Error:", error);
+
+    // Provide helpful message for license limits
+    if (error.message.includes("available resources") || error.message.includes("clients) left")) {
+      return NextResponse.json({ 
+        error: "Plesk License Limit: You have reached the maximum number of clients allowed by your Plesk license. Please upgrade your license or remove unused clients in Plesk." 
+      }, { status: 403 });
+    }
+
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
 }
 

@@ -41,7 +41,10 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     phone: "",
     whatsappOptIn: false,
     notes: "",
+    pleskLogin: "",
+    pleskPassword: "",
   });
+
 
   const fetchClient = async () => {
     try {
@@ -55,7 +58,10 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         phone: data.phone || "",
         whatsappOptIn: data.whatsappOptIn,
         notes: data.notes || "",
+        pleskLogin: data.pleskLogin || "",
+        pleskPassword: data.pleskPassword || "",
       });
+
     } catch (err) {
       console.error(err);
       router.push("/clients");
@@ -173,7 +179,27 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                 {client.notes || "No additional notes for this client."}
               </p>
             </div>
+
+            {client.pleskLogin && (
+              <div className="card mt-6" style={{ background: "rgba(99, 102, 241, 0.05)", borderColor: "rgba(99, 102, 241, 0.2)" }}>
+                <h3 className="card-title" style={{ fontSize: 16, marginBottom: 16, color: "var(--brand-primary)" }}>Plesk Credentials</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-secondary text-xs uppercase font-bold tracking-wider">Username</span>
+                    <code style={{ background: "rgba(0,0,0,0.2)", padding: "2px 6px", borderRadius: 4 }}>{client.pleskLogin}</code>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-secondary text-xs uppercase font-bold tracking-wider">Password</span>
+                    <code style={{ background: "rgba(0,0,0,0.2)", padding: "2px 6px", borderRadius: 4 }}>{client.pleskPassword}</code>
+                  </div>
+                </div>
+                <p className="text-muted text-xs mt-4">
+                  These can be shared with the client for their CP access.
+                </p>
+              </div>
+            )}
           </div>
+
 
           {/* Right Column: Dynamic Tabs */}
           <div className="col-span-12 lg:col-span-8">
@@ -336,7 +362,32 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                   style={{ minHeight: 80 }}
                 />
               </div>
+
+              <div style={{ borderTop: "1px solid var(--border-subtle)", marginTop: 8, paddingTop: 16 }}>
+                <h4 style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", marginBottom: 16, textTransform: "uppercase" }}>Plesk Access (Optional)</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="form-group">
+                    <label className="form-label">Plesk Username</label>
+                    <input
+                      className="form-input"
+                      value={form.pleskLogin}
+                      onChange={(e) => setForm(f => ({ ...f, pleskLogin: e.target.value }))}
+                      placeholder="e.g. jdoe123"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Plesk Password</label>
+                    <input
+                      className="form-input"
+                      value={form.pleskPassword}
+                      onChange={(e) => setForm(f => ({ ...f, pleskPassword: e.target.value }))}
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
+
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setShowEditModal(false)}>Cancel</button>
               <button className="btn btn-primary" onClick={handleSave} disabled={saving}>

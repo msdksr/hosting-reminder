@@ -10,7 +10,12 @@ export interface Client {
   phone?: string | null;
   whatsappOptIn: boolean;
   notes?: string | null;
+  pleskId?: number | null;
+  pleskLogin?: string | null;
+
+  pleskPassword?: string | null;
   services?: Service[];
+
   createdAt: string;
   updatedAt: string;
 }
