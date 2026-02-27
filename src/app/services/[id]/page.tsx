@@ -26,6 +26,8 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ id: st
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [pleskLoading, setPleskLoading] = useState(false);
+
   const [form, setForm] = useState({
     domainName: "",
     serviceType: "",
@@ -83,6 +85,27 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ id: st
       setSaving(false);
     }
   };
+
+  const handlePushToPlesk = async () => {
+    if (!service) return;
+    if (!window.confirm(`Create domain ${service.domainName} in Plesk?`)) return;
+    setPleskLoading(true);
+    try {
+      const res = await fetch(`/api/plesk/services/${id}`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        alert("Successfully created domain in Plesk!");
+        fetchService();
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    } finally {
+      setPleskLoading(false);
+    }
+  };
+
 
   if (loading) {
     return (
@@ -184,7 +207,18 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ id: st
         <div className="mt-8 flex gap-4">
             <button className="btn btn-secondary flex-1" style={{ padding: 16 }}>Generate Invoice</button>
             <button className="btn btn-primary flex-1" style={{ padding: 16 }}>Send Manual Reminder</button>
+            {service.serviceType === "hosting" && (
+              <button 
+                className="btn btn-purple flex-1" 
+                style={{ padding: 16, background: "var(--brand-secondary)" }}
+                onClick={handlePushToPlesk}
+                disabled={pleskLoading}
+              >
+                {pleskLoading ? "Pushing..." : "Push to Plesk"}
+              </button>
+            )}
         </div>
+
       </div>
 
       {/* Edit Modal */}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session) {
@@ -52,6 +53,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       },
       include: { client: true },
     });
+
+
+
 
     return NextResponse.json(service);
   } catch (error) {

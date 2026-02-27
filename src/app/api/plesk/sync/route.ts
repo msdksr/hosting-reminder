@@ -60,18 +60,11 @@ export async function POST() {
     for (const pd of pleskDomains) {
       try {
         const localClientId = clientMap.get(pd.client_id);
-        if (!localClientId) {
-          // Find client by plesk client id? 
-          // Our Client model doesn't store plesk_id. Maybe it should?
-          // For now, let's skip if no client found in this session
-          continue;
-        }
+        if (!localClientId) continue;
 
         // Check if service already exists for this domain
         await prisma.service.upsert({
           where: { 
-            // We don't have a unique constraint on domainName alone in schema.prisma, 
-            // but we can find it.
             id: (await prisma.service.findFirst({ where: { domainName: pd.name, clientId: localClientId } }))?.id || 0
           },
           update: {
@@ -80,8 +73,8 @@ export async function POST() {
           create: {
             clientId: localClientId,
             domainName: pd.name,
-            serviceType: "hosting", // Default to hosting
-            expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Default 1 year if not known
+            serviceType: "hosting",
+            expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Default 1 year
             status: "active",
           },
         });
@@ -91,6 +84,7 @@ export async function POST() {
         errors.push(`Domain ${pd.name}: ${err.message}`);
       }
     }
+
 
     await prisma.syncLog.update({
       where: { id: syncLog.id },

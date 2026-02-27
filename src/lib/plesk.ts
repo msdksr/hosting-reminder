@@ -168,3 +168,35 @@ export async function createPleskClient(data: {
   });
 }
 
+
+export async function createPleskDomain(data: {
+  name: string;
+  client_id: number;
+  hosting_type?: "none" | "virtual" | "std_fwd" | "frm_fwd";
+}) {
+  const hType = data.hosting_type || "virtual";
+  const body: any = {
+    name: data.name,
+    owner_client: { id: data.client_id },
+    hosting_type: hType,
+  };
+
+  if (hType === "virtual") {
+    // Generate simple FTP credentials if none provided
+    // login must be 1-16 chars, lowercase
+    const ftpLogin = data.name.split('.')[0].substring(0, 12).toLowerCase().replace(/[^a-z0-9]/g, "") + Math.floor(10 + Math.random() * 90);
+    const ftpPassword = "Pass" + Math.random().toString(36).slice(-8) + "1!";
+    
+    body.hosting_settings = {
+      ftp_login: ftpLogin,
+      ftp_password: ftpPassword,
+    };
+  }
+
+  return await pleskFetch("/domains", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+

@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { createPleskDomain } from "@/lib/plesk";
 
 export async function GET() {
+  // ... (keeping existing GET logic)
   const session = await auth();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -28,7 +30,6 @@ export async function GET() {
   }
 }
 
-
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPERADMIN")) {
@@ -53,6 +54,26 @@ export async function POST(req: NextRequest) {
       },
       include: { client: true },
     });
+
+    // AUTO-CREATE IN PLESK IF HOSTING
+    if (serviceType === "hosting" && service.client?.pleskId) {
+      try {
+        await createPleskDomain({
+          name: domainName,
+          client_id: service.client.pleskId,
+          hosting_type: "virtual"
+        });
+
+        console.log(`Successfully created domain ${domainName} in Plesk`);
+      } catch (pleskErr: any) {
+        console.error("Failed to create domain in Plesk:", pleskErr.message);
+        // We don't fail the whole request if Plesk sync fails, but we could return a warning
+        return NextResponse.json({ 
+          ...service, 
+          pleskWarning: `Service created locally, but failed to create in Plesk: ${pleskErr.message}` 
+        });
+      }
+    }
 
     return NextResponse.json(service);
   } catch (error) {
