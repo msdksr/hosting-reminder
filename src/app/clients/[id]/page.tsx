@@ -44,6 +44,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     pleskLogin: "",
     pleskPassword: "",
   });
+  const [pushingToPlesk, setPushingToPlesk] = useState(false);
 
 
   const fetchClient = async () => {
@@ -98,6 +99,33 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     }
   };
 
+  const handlePushToPlesk = async () => {
+    if (!client || pushingToPlesk) return;
+    
+    if (!confirm(`Are you sure you want to create this client in Plesk? This will generate login credentials.`)) {
+      return;
+    }
+
+    setPushingToPlesk(true);
+    try {
+      const res = await fetch(`/api/plesk/clients/${id}`, {
+        method: "POST",
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert(`Successfully created in Plesk!\nLogin: ${data.login}\nPassword: ${data.tempPassword}`);
+        await fetchClient();
+      } else {
+        alert(`Error pushing to Plesk: ${data.error || "Unknown error"}`);
+      }
+    } catch (err: any) {
+      alert(`Connection error: ${err.message}`);
+    } finally {
+      setPushingToPlesk(false);
+    }
+  };
+
 
   if (loading) {
     return (
@@ -142,11 +170,28 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                 <span className={`badge ${client.whatsappOptIn ? "badge-success" : "badge-muted"}`}>
                   {client.whatsappOptIn ? "WhatsApp Enabled" : "WhatsApp Disabled"}
                 </span>
+                {client.pleskId && (
+                  <span className="badge badge-purple" style={{ background: "rgba(168, 85, 247, 0.1)", color: "#a855f7", border: "1px solid rgba(168, 85, 247, 0.2)" }}>
+                    🔌 Plesk Connected
+                  </span>
+                )}
               </div>
             </div>
           </div>
           <div className="flex gap-3">
             <button className="btn btn-secondary" onClick={() => router.push("/clients")}>Back to List</button>
+            
+            {!client.pleskId && client.services.some(s => s.serviceType === "hosting") && (
+              <button 
+                className="btn btn-primary" 
+                onClick={handlePushToPlesk} 
+                disabled={pushingToPlesk}
+                style={{ background: "linear-gradient(to right, #6366f1, #a855f7)", border: "none" }}
+              >
+                {pushingToPlesk ? "Creating..." : "🔌 Create in Plesk"}
+              </button>
+            )}
+            
             <button className="btn btn-primary" onClick={() => setShowEditModal(true)}>Edit Profile</button>
           </div>
         </div>

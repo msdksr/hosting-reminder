@@ -88,12 +88,13 @@ async function pleskFetch(endpoint: string, options: RequestInit = {}) {
 
     if (!response.ok) {
       let errorMsg = `Plesk API error: ${response.status} ${response.statusText}`;
+      const errorBody = await response.text();
+      
       try {
-        const errorJson = await response.json();
+        const errorJson = JSON.parse(errorBody);
         errorMsg += ` - ${errorJson.message || JSON.stringify(errorJson)}`;
       } catch {
-        const errorText = await response.text();
-        errorMsg += ` - ${errorText.substring(0, 200)}`;
+        errorMsg += ` - ${errorBody.substring(0, 255)}`;
       }
       throw new Error(errorMsg);
     }
@@ -109,13 +110,20 @@ async function pleskFetch(endpoint: string, options: RequestInit = {}) {
       endpoint
     });
     
+    // If it's the error we just constructed above, throw it as is
     if (err.message.includes("Plesk API error")) throw err;
     
+    // For other fetch errors (network, SSL, etc.)
     let detail = err.message;
     if (err.cause) {
       detail += ` (Cause: ${err.cause.message || err.cause})`;
     }
     
+    // If it's a body read error, it means something went wrong in our code logic
+    if (err.message.includes("Body is unusable") || err.message.includes("already been read")) {
+       throw new Error(`Fetch failed: ${detail}. This is likely a bug in the fetch logic or a middleware interference. (${endpoint})`);
+    }
+
     throw new Error(`Fetch failed: ${detail}. This is likely a network or SSL issue between your server and Plesk.`);
   }
 }
