@@ -98,6 +98,7 @@ model Service {
   price        Float         @default(0)
   isPaid       Boolean       @default(false)
   status       String        @default("active") // active | expired | renewed
+  pleskId      Int?          @unique
   reminders    Reminder[]
   reminderLogs ReminderLog[]
   createdAt    DateTime      @default(now())

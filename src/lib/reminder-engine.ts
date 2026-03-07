@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "./email";
 import { sendWhatsAppMessage } from "./whatsapp";
+import { updatePleskDomainStatus } from "./plesk";
 
 export const REMINDER_STAGES = [30, 14, 7, 3, 1, 0];
 
@@ -44,6 +45,21 @@ export const runReminders = async () => {
 
   for (const service of services) {
     const daysLeft = daysBetween(service.expiryDate, today);
+
+    // Rule: If service expired than auto change the status for plesk domain
+    if (daysLeft <= 0 && service.pleskId && service.status !== "expired") {
+       try {
+         await updatePleskDomainStatus(service.pleskId, "suspended");
+         // Also update our local status
+         await prisma.service.update({
+           where: { id: service.id },
+           data: { status: "expired" }
+         });
+         console.log(`📡 Auto-suspended Plesk domain ${service.domainName} due to expiration.`);
+       } catch (err) {
+         console.error(`Failed to auto-suspend ${service.domainName} in Plesk:`, err);
+       }
+    }
 
     if (!activeStages.includes(daysLeft)) continue;
 

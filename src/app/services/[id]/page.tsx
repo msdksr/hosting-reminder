@@ -35,6 +35,7 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ id: st
     price: 0,
     isPaid: false,
     status: "",
+    pleskId: null as number | null,
   });
 
   const fetchService = async () => {
@@ -50,6 +51,7 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ id: st
         price: data.price,
         isPaid: data.isPaid,
         status: data.status,
+        pleskId: data.pleskId,
       });
     } catch (err) {
       console.error(err);

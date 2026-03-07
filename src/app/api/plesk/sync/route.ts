@@ -27,16 +27,23 @@ export async function POST() {
     const errors: string[] = [];
 
     // Map Plesk clients to local clients
-    const clientMap = new Map<number, any>(); // plesk_id -> local_client_id
+    const clientMap = new Map<number, number>(); // plesk_id -> local_client_id
+
+    // First, populate clientMap with existing clients that have pleskId
+    const existingClients = await prisma.client.findMany({
+      where: { pleskId: { not: null } },
+      select: { id: true, pleskId: true }
+    });
+    existingClients.forEach(c => clientMap.set(c.pleskId!, c.id));
 
     for (const pc of pleskClients) {
       try {
         const client = await prisma.client.upsert({
-          where: { email: pc.email }, // Still fall back to email as primary unique for upsert
+          where: { pleskId: pc.id }, // Use pleskId as primary unique identifier
           update: {
             name: pc.name || pc.login,
+            email: pc.email,
             phone: pc.phone || null,
-            pleskId: pc.id,
             pleskLogin: pc.login,
           },
           create: {
@@ -50,9 +57,18 @@ export async function POST() {
         clientMap.set(pc.id, client.id);
         totalSynced++;
       } catch (err: any) {
-
-        totalErrors++;
-        errors.push(`Client ${pc.login}: ${err.message}`);
+        // Fallback for email conflicts if pleskId upsert failed for some reason
+        try {
+           const client = await prisma.client.update({
+             where: { email: pc.email },
+             data: { pleskId: pc.id, pleskLogin: pc.login }
+           });
+           clientMap.set(pc.id, client.id);
+           totalSynced++;
+        } catch (e2) {
+          totalErrors++;
+          errors.push(`Client ${pc.login}: ${err.message}`);
+        }
       }
     }
 
@@ -60,24 +76,45 @@ export async function POST() {
     for (const pd of pleskDomains) {
       try {
         const localClientId = clientMap.get(pd.client_id);
-        if (!localClientId) continue;
+        if (!localClientId) {
+          console.warn(`Skipping domain ${pd.name}: Owner client (Plesk ID ${pd.client_id}) not found or synced.`);
+          continue;
+        }
 
-        // Check if service already exists for this domain
+        // Efficiently link Plesk domains to local services
+        // 1. Try to find by unique pleskId
+        let existingService = await prisma.service.findUnique({ 
+          where: { pleskId: pd.id } 
+        });
+        
+        // 2. Fallback: Try to find by domain name + client (manual entries)
+        if (!existingService) {
+          existingService = await prisma.service.findFirst({
+            where: { domainName: pd.name, clientId: localClientId }
+          });
+        }
+
+        // 3. Upsert using the ID we found, or create new
+        // We ensure pleskId is explicitly set to pd.id (e.g. 5)
         await prisma.service.upsert({
-          where: { 
-            id: (await prisma.service.findFirst({ where: { domainName: pd.name, clientId: localClientId } }))?.id || 0
-          },
+          where: { id: existingService?.id || 0 },
           update: {
+            domainName: pd.name,
             status: "active",
+            pleskId: pd.id,
+            clientId: localClientId,
           },
           create: {
+            pleskId: pd.id,
             clientId: localClientId,
             domainName: pd.name,
             serviceType: "hosting",
-            expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Default 1 year
+            expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
             status: "active",
           },
         });
+        
+        console.log(`Sync success: Domain ${pd.name} linked to local client ${localClientId} with Plesk ID ${pd.id}`);
         totalSynced++;
       } catch (err: any) {
         totalErrors++;

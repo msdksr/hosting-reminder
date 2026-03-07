@@ -73,11 +73,6 @@ async function pleskFetch(endpoint: string, options: RequestInit = {}) {
   // TOKEN BASED AUTHENTICATION (X-API-Key)
   // This is the most secure way for Plesk API V2
   headers["X-API-Key"] = config.apiKey;
-  
-  // If user provided a username, we still use Basic Auth as fallback 
-  // but X-API-Key takes precedence in Plesk V2
-  const authHeader = Buffer.from(`${config.username}:${config.apiKey}`).toString('base64');
-  headers["Authorization"] = `Basic ${authHeader}`;
 
 
   try {
@@ -208,3 +203,10 @@ export async function createPleskDomain(data: {
 }
 
 
+
+export async function updatePleskDomainStatus(domainId: number | string, status: "active" | "suspended" | "disabled") {
+  return await pleskFetch(`/domains/${domainId}/status`, {
+    method: "PUT",
+    body: JSON.stringify({ status }),
+  });
+}
